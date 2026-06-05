@@ -1,0 +1,279 @@
+!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>JARVIS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+
+  .orb-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin-bottom: 40px;
+  }
+
+  canvas {
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  .status {
+    color: #ff9900;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+
+  .news-box {
+    width: 80%;
+    max-width: 600px;
+    background: rgba(255,150,0,0.05);
+    border: 1px solid rgba(255,150,0,0.2);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .news-box h3 {
+    color: #ff9900;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .news-item {
+    color: #cc7700;
+    font-size: 0.85rem;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,150,0,0.1);
+    line-height: 1.4;
+  }
+
+  .tasks-box {
+    width: 80%;
+    max-width: 600px;
+    background: rgba(255,150,0,0.05);
+    border: 1px solid rgba(255,150,0,0.2);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .tasks-box h3 {
+    color: #ff9900;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #cc7700;
+    font-size: 0.85rem;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,150,0,0.1);
+    cursor: pointer;
+  }
+
+  .task-item input[type="checkbox"] {
+    accent-color: #ff9900;
+    width: 16px;
+    height: 16px;
+  }
+
+  .task-item.done {
+    text-decoration: line-through;
+    opacity: 0.4;
+  }
+
+  .mic-bar {
+    position: fixed;
+    bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #ff9900;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+  }
+
+  .mic-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255,150,0,0.1);
+    border: 1px solid #ff9900;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .mic-icon.active {
+    background: rgba(255,150,0,0.3);
+    box-shadow: 0 0 20px rgba(255,150,0,0.5);
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ff9900; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="orb-container">
+  <canvas id="orb" width="300" height="300"></canvas>
+</div>
+
+<div class="status" id="status">JARVIS ONLINE</div>
+
+<div class="news-box">
+  <h3>⚡ Latest AI News</h3>
+  <div id="news-list">
+    <div class="news-item">Loading latest AI news...</div>
+  </div>
+</div>
+
+<div class="tasks-box">
+  <h3>📋 Today's Tasks</h3>
+  <div id="task-list"></div>
+</div>
+
+<div class="mic-bar">
+  <div class="mic-icon" id="mic">🎤</div>
+  <span id="mic-text">Say something...</span>
+</div>
+
+<script>
+// ─── ORB ANIMATION ────────────────────────────────────
+const canvas = document.getElementById('orb');
+const ctx = canvas.getContext('2d');
+const particles = [];
+const NUM = 300;
+const CX = 150, CY = 150, R = 110;
+
+for (let i = 0; i < NUM; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.random() * Math.PI * 2;
+  particles.push({
+    theta, phi,
+    r: R + (Math.random() - 0.5) * 20,
+    speed: 0.002 + Math.random() * 0.003,
+    size: Math.random() * 2.5,
+    color: Math.random() > 0.5 ? '#ff9900' : '#ffffff'
+  });
+}
+
+let speaking = false;
+
+function drawOrb() {
+  ctx.clearRect(0, 0, 300, 300);
+  const scale = speaking ? 1 + Math.sin(Date.now() * 0.01) * 0.05 : 1;
+
+  particles.forEach(p => {
+    p.theta += p.speed * scale;
+    const x = CX + p.r * Math.sin(p.phi) * Math.cos(p.theta);
+    const y = CY + p.r * Math.sin(p.phi) * Math.sin(p.theta) * 0.9;
+    const alpha = 0.4 + Math.sin(p.theta) * 0.4;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size * scale, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = alpha;
+    ctx.fill();
+  });
+
+  // Glow
+  const grd = ctx.createRadialGradient(CX, CY, 0, CX, CY, R);
+  grd.addColorStop(0, 'rgba(255,120,0,0.08)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, 300, 300);
+
+  requestAnimationFrame(drawOrb);
+}
+drawOrb();
+
+// ─── LOAD DATA FROM JARVIS ────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch('http://localhost:5000/data');
+    const data = await res.json();
+
+    // News
+    const newsList = document.getElementById('news-list');
+    newsList.innerHTML = '';
+    data.news.forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'news-item';
+      div.textContent = '• ' + n;
+      newsList.appendChild(div);
+    });
+
+    // Tasks
+    const taskList = document.getElementById('task-list');
+    taskList.innerHTML = '';
+    data.tasks.forEach((t, i) => {
+      const div = document.createElement('div');
+      div.className = 'task-item';
+      div.innerHTML = `<input type="checkbox" onchange="toggleTask(${i})"> ${t}`;
+      taskList.appendChild(div);
+    });
+
+  } catch(e) {
+    document.getElementById('news-list').innerHTML =
+      '<div class="news-item">Connect JARVIS to load news...</div>';
+  }
+}
+
+function toggleTask(i) {
+  const tasks = document.querySelectorAll('.task-item');
+  tasks[i].classList.toggle('done');
+}
+
+// ─── STATUS UPDATE ────────────────────────────────────
+function setStatus(text, active=false) {
+  document.getElementById('status').textContent = text;
+  document.getElementById('mic').className = 'mic-icon' + (active ? ' active' : '');
+  document.getElementById('mic-text').textContent = active ? 'Listening...' : 'Say something...';
+  speaking = active;
+}
+
+// Listen for status updates from JARVIS
+setInterval(async () => {
+  try {
+    const res = await fetch('http://localhost:5000/status');
+    const data = await res.json();
+    setStatus(data.status, data.active);
+  } catch(e) {}
+}, 500);
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
