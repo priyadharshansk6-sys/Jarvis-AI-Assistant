@@ -1,4 +1,4 @@
-# JARVIS - Voice-Controlled AI Assistant
+# Voice-Controlled AI Assistant
 
 A Python app that takes voice commands, pipes them through Groq's llama model, searches the web if needed, and talks back to you—all running locally on Windows.
 
